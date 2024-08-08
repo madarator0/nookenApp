@@ -4,7 +4,6 @@ using System.Configuration;
 
 namespace nookenApp.Helper
 {
-
     public class AppDbContext : DbContext
     {
         public DbSet<TQFH> TQFHs { get; set; }
@@ -17,27 +16,26 @@ namespace nookenApp.Helper
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
         {
-            
         }
 
-        public AppDbContext() : base()
+        public AppDbContext()
         {
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(Settings.ConnectionString);
+            if (!optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseSqlServer(Settings.ConnectionString);
+            }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-        { 
+        {
             modelBuilder.Entity<TVodvod>(entity =>
             {
                 entity.HasKey(e => e.KODVODVOD);
-
-                entity.HasIndex(e => e.NAMEVODVOD)
-                    .IsUnique();
-
+                entity.HasIndex(e => e.NAMEVODVOD).IsUnique();
                 entity.Property(e => e.SHEROH).HasColumnType("float");
                 entity.Property(e => e.KPD).HasColumnType("float");
                 entity.Property(e => e.MAXQ).HasColumnType("float");
