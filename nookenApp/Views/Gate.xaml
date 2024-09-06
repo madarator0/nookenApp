@@ -1,0 +1,82 @@
+﻿<Window x:Class="nookenApp.Views.Gate"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:nookenApp.Views"
+        Title="Gate" Height="350" Width="400">
+    <Grid>
+        <!-- Log TextBox (уменьшен по высоте) -->
+        <TextBox Name="log" 
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto"
+                 IsReadOnly="True"
+                 Margin="10,45,10,189"
+                 Height="100"
+                 Text="{Binding Log, UpdateSourceTrigger=PropertyChanged}" />
+
+        <!-- ComboBox для выбора датчиков -->
+        <ComboBox Name="sensorList"
+          Width="200"
+          Height="30"
+          Margin="10,10,0,0"
+          HorizontalAlignment="Left"
+          VerticalAlignment="Top"
+          ItemsSource="{Binding Objects}" 
+          SelectedItem="{Binding SelectedObject}"
+          DisplayMemberPath="NAMEOBJ" 
+          ToolTip="Select a sensor" />
+
+
+            <!-- Value TextBox -->
+            <TextBox Name="value" 
+                 Width="100"
+                 Height="30"
+                 Margin="10,160,0,0"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Top"
+                 ToolTip="Enter value for zatvor position"
+                 Text="{Binding ZatvorValue, UpdateSourceTrigger=PropertyChanged}" />
+
+            <!-- Current Position Label -->
+            <Label Content="Current Position:"
+               Margin="10,200,0,0"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Top" />
+
+            <!-- Current Position TextBox -->
+            <TextBox Name="currentPosition"
+                 Width="100"
+                 Height="30"
+                 Margin="120,200,0,0"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Top"
+                 IsReadOnly="True"
+                 Text="{Binding CurrentPosition, UpdateSourceTrigger=PropertyChanged}" />
+
+            <!-- Lower Button -->
+            <Button Content="Lower"
+                Width="100"
+                Height="30"
+                Margin="10,240,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Command="{Binding LowerCommand}" />
+
+            <!-- Raise Button -->
+            <Button Content="Raise"
+                Width="100"
+                Height="30"
+                Margin="120,240,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Command="{Binding RaiseCommand}" />
+
+            <!-- Stop Button -->
+            <Button Content="Stop"
+                Width="100"
+                Height="30"
+                Margin="230,240,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Command="{Binding StopCommand}" />
+    </Grid>
+</Window>

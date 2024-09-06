@@ -33,6 +33,14 @@ namespace nookenApp.Helper
             }
         }
 
+        public static int region
+        {
+            get
+            {
+                return Convert.ToInt32(ConfigurationManager.AppSettings["region"]);
+            }
+        }
+
         public static string MconnectionString
         {
             get

@@ -8,6 +8,7 @@
         Title="nooken" Height="350" Width="525">
     <Grid Margin="0,0,0,2">
         <Button x:Name="OpenSensorDataWindowButton" Content="Open Sensor Data Window" HorizontalAlignment="Left" VerticalAlignment="Top" Width="200" Height="30" Margin="10" Click="OpenSensorDataWindowButton_Click"/>
-        <Button x:Name="OpenSettingsWindowButton" Content="Settings" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="30" Margin="220,10,0,0" Click="OpenSettingsWindowButton_Click"/>
+        <Button x:Name="Gate" Content="Gate" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="30" Margin="215,10,0,0" Click="OpenGateWindowButton_Click"/>
+        <Button x:Name="OpenSettingsWindowButton" Content="Settings" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="30" Margin="415,10,0,0" Click="OpenSettingsWindowButton_Click"/>
     </Grid>
 </Window>

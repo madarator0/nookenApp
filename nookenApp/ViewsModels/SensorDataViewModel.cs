@@ -1,37 +1,97 @@
-﻿using System.Windows;
-using System.Windows.Controls;
-using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Threading.Tasks;
+using System.Windows.Input;
 using nookenApp.Models;
+using nookenApp.Helper;
+using CommunityToolkit.Mvvm.Input;
+using System.Windows;
+using Microsoft.EntityFrameworkCore;
 
-namespace nookenApp.Helper
+namespace nookenApp.ViewModels
 {
-    public static class DataRotation
+    public class SensorDataViewModel : INotifyPropertyChanged
     {
-        private static List<byte> flesh = new List<byte>();
-        public static TextBox DataTextBox { get; set; }
-        private static int nFlesh = 0;
-        private static AppDbContext db;
-        private static ApiHelper apiHelper;
-        private static TopertimeRepository top;
-        private static TbalansRepository tbalans;
-        private static MeasurementsRepository measurements; 
-        // Initialization method for dependency injection
-       
-        public static void Initialize(AppDbContext context)
+        private readonly AppDbContext _dbContext;
+        private ApiHelper _apiHelper;
+        private readonly TopertimeRepository _topRepository;
+        private readonly TbalansRepository _tbalansRepository;
+        private readonly MeasurementsRepository _measurementsRepository;
+        private string _dataLog;
+        private bool _isReading;
+
+        private List<byte> flesh = new List<byte>();
+        private int nFlesh = 0;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public SensorDataViewModel(AppDbContext dbContext)
         {
-            db = context;
-            apiHelper = new ApiHelper();
-            top = new TopertimeRepository(db);
-            tbalans = new TbalansRepository(db);
-            measurements = new MeasurementsRepository(db);
+            _dbContext = dbContext;
+            _apiHelper = new ApiHelper();
+            _topRepository = new TopertimeRepository(_dbContext);
+            _tbalansRepository = new TbalansRepository(_dbContext);
+            _measurementsRepository = new MeasurementsRepository(_dbContext);
         }
 
-        public static void UpdateAPI()
+        public string DataLog
         {
-            apiHelper = new ApiHelper();
+            get => _dataLog;
+            set
+            {
+                _dataLog = value;
+                OnPropertyChanged(nameof(DataLog));
+            }
         }
 
-        public static async Task Opros()
+        public bool IsReading
+        {
+            get => _isReading;
+            set
+            {
+                _isReading = value;
+                OnPropertyChanged(nameof(IsReading));
+            }
+        }
+
+        public ICommand StartReadingCommand => new RelayCommand(async () => await StartReading(), () => !IsReading);
+        public ICommand StopReadingCommand => new RelayCommand(StopReading, () => IsReading);
+
+        public async Task StartReading()
+        {
+            IsReading = true;
+            try
+            {
+                if (!SerialPortHelper.port.IsOpen)
+                {
+                    SerialPortHelper.port.Open();
+                }
+                while (IsReading)
+                {
+                    await Opros();
+                }
+            }
+            catch (Exception ex)
+            {
+                DataLog += $"Error: {ex.Message}\n";
+            }
+            finally
+            {
+                if (SerialPortHelper.port.IsOpen)
+                {
+                    SerialPortHelper.port.Close();
+                }
+            }
+            IsReading = false;
+        }
+
+        public void StopReading()
+        {
+            IsReading = false;
+        }
+
+        private async Task Opros()
         {
             byte numplc = 0;
             int counter;
@@ -39,7 +99,7 @@ namespace nookenApp.Helper
             DateTime sensorTime = DateTime.MinValue;
             int sutki = 45;
 
-            var tobj = await db.TOBJ.FirstOrDefaultAsync(o => o.KODDAT == numplc);
+            var tobj = await _dbContext.TOBJ.FirstOrDefaultAsync(o => o.KODDAT == numplc);
 
             for (byte i = 0; i < 3; i++)
             {
@@ -50,11 +110,11 @@ namespace nookenApp.Helper
                     flag = flesh[19];
                     counter = (flesh[20] << 8) + flesh[21]; // Correct bitwise shift
                     sensorTime = Calculations.DecodeTime(flesh.ToArray());
-                    DataTextBox.Text += $"Sensor Time: {sensorTime:yyyy-MM-dd HH:mm:ss}\n";
+                    DataLog += $"Sensor Time: {sensorTime:yyyy-MM-dd HH:mm:ss}\n";
                 }
                 else
                 {
-                    DataTextBox.Text += "Communication failure.\n";
+                    DataLog += "Communication failure.\n";
                     continue;
                 }
 
@@ -80,7 +140,7 @@ namespace nookenApp.Helper
                     };
                     if (await SerialPortHelper.OutIn(flesh, numplc, 4, 0, 7, data.ToArray()))
                     {
-                        DataTextBox.Text += "Sensor time updated.\n";
+                        DataLog += "Sensor time updated.\n";
                     }
                 }
 
@@ -91,15 +151,13 @@ namespace nookenApp.Helper
                 }
                 else
                 {
-                    DataTextBox.Text += "Communication failure.\n";
+                    DataLog += "Communication failure.\n";
                     continue;
                 }
             }
-
-            await ProcessFleshData(flesh, sensorTime, sutki, tobj);
         }
 
-        private static async Task HandleSensorData(List<byte> flesh, DateTime sensorTime, byte numplc, int sutki, int counter, int flag)
+        private async Task HandleSensorData(List<byte> flesh, DateTime sensorTime, byte numplc, int sutki, int counter, int flag)
         {
             // Extract values from flesh and convert as needed
             double uu = ((flesh[4] & 0xF0) >> 4) * 10 + (flesh[4] & 0x0F); // Voltage %
@@ -113,10 +171,10 @@ namespace nookenApp.Helper
             float ti = (float)Calculations.BacktrancAVR(flesh[6], flesh[7], flesh[8]);
             float L = 0;
 
-            var tobj = await db.TOBJ.FirstOrDefaultAsync(o => o.KODDAT == numplc);
+            var tobj = await _dbContext.TOBJ.FirstOrDefaultAsync(o => o.KODDAT == numplc);
             if (tobj == null)
             {
-                DataTextBox.Text += "TOBJ not found.\n";
+                DataLog += "TOBJ not found.\n";
                 return;
             }
 
@@ -124,30 +182,29 @@ namespace nookenApp.Helper
             {
                 case 4:
                     L = ti;
-                    DataTextBox.Text += $"L, m={ti:0.000} ";
-                    await top.InsertAsync(tobj.KODOBJ, 4, sensorTime, ti, tc);
+                    DataLog += $"L, m={ti:0.000} ";
+                    await _topRepository.InsertAsync(tobj.KODOBJ, 4, sensorTime, ti, tc);
                     ti = (float)tobj.KOEFK - ti;
                     break;
                 case 2:
                     L = (float)tobj.KOEFK - ti;
-                    DataTextBox.Text += $"L, m={(tobj.KOEFK - ti):0.000} ";
-                    await top.InsertAsync(tobj.KODOBJ, 4, sensorTime, tobj.KOEFK - ti, tc);
+                    DataLog += $"L, m={(tobj.KOEFK - ti):0.000} ";
+                    await _topRepository.InsertAsync(tobj.KODOBJ, 4, sensorTime, tobj.KOEFK - ti, tc);
                     break;
             }
 
             float H = ti;
-            DataTextBox.Text += $"H = {ti:0.000}";
+            DataLog += $"H = {ti:0.000}";
             ti = ti < 0 ? 0 : ti;
 
-            float Q = (float)await Calculations.CalculateVolumeAsync((byte)tobj.KODOBJ, H, db);
-            DataTextBox.Text += $" Q = {Q:0.000}\n";
+            float Q = (float)await Calculations.CalculateVolumeAsync((byte)tobj.KODOBJ, H, _dbContext);
+            DataLog += $"Q = {Q:0.000}\n";
 
-            DataTextBox.Text += $"Charge,%={uu:0.0} Signal = {_signal}\n";
-
+            DataLog += $"Charge,%={uu:0.0} Signal = {_signal}\n";
 
             var data = new
             {
-                id_reg = 2,
+                id_reg = Settings.region,
                 sensor_number = numplc,
                 name_obj = "",
                 urov_L = L,
@@ -156,40 +213,41 @@ namespace nookenApp.Helper
                 charge = uu,
                 signal = _signal,
                 date = sensorTime
-                //sensor_id = numplc,
-                //degree = L,
-                //reika = H,
-                //rate = Q,
-                //charge = uu,
-                //signal = _signal,
-                //reading_date = sensorTime
+            };
+
+            var data1 = new
+            {
+                sensor_id = numplc,
+                degree = L,
+                reika = H,
+                rate = Q,
+                charge = uu,
+                signal = _signal,
+                reading_date = sensorTime
             };
 
             int synchron = 0; // Initialize synchron as 0
             try
             {
-                string res = await apiHelper.SendJsonAsync(data);
-                //bool res = await SerialPortHelper.SendDataToApiThroughTcpIp(data, ConfigurationManager.ConnectionStrings["URL"].ConnectionString, "35.225.1.29", 8000);
-                DataTextBox.Text += $"API response: {res}\n";
+                string res = await _apiHelper.SendJsonAsync(data);
+                DataLog += $"API response: {res}\n";
                 synchron = 1; // Set synchron to 1 if data is successfully sent to the server
             }
             catch
             {
-                DataTextBox.Text += "не получилось отправить данные на сервер \n";
+                //DataLog += "Failed to send data to the server.\n";
+                Console.WriteLine("Failed to send data to the server.\n");
             }
 
-            // Create a new measurementsModels instance and populate it with the data
-            bool res1 = await measurements.InsertAsync(data.sensor_number, data.name_obj, data.urov_L, data.reyka_H, data.rashod_Q, data.charge, data.signal, data.date, synchron);
-
-            // Save the measurement data to the database
+            bool res1 = await _measurementsRepository.InsertAsync(data.sensor_number, data.name_obj, data.urov_L, data.reyka_H, data.rashod_Q, data.charge, data.signal, data.date, synchron);
 
             DateTime now = DateTime.Now;
-            DateTime maxtime = await top.GetMaxDatatimeAsync(tobj.KODOBJ);
+            DateTime maxtime = await _topRepository.GetMaxDatatimeAsync(tobj.KODOBJ);
             int rr = tobj.KOEFSPEED < 60
                 ? 1
                 : CalculateRR(sutki, tobj, now, maxtime, numplc);
 
-            DataTextBox.Text += $"{rr} {counter} ";
+            DataLog += $"{rr} {counter} ";
 
             flesh.Clear();
 
@@ -210,16 +268,16 @@ namespace nookenApp.Helper
                 flesh.AddRange(await SerialPortHelper.Read(counter - rr, rr, numplc));
             }
             nFlesh = flesh.Count;
-            DataTextBox.Text += $"{nFlesh}\n";
+            DataLog += $"{nFlesh}\n";
 
             if (SerialPortHelper.sboi)
             {
-                DataTextBox.Text += "Connection lost " + DateTime.Now.ToString("HH:mm:ss") + "\n";
+                DataLog += "Connection lost " + DateTime.Now.ToString("HH:mm:ss") + "\n";
             }
             else
             {
                 List<byte> bytes = new List<byte>();
-                DataTextBox.Text += "Data read " + DateTime.Now.ToString("dd.MM.yy HH:mm:ss") + "\n";
+                DataLog += "Data read " + DateTime.Now.ToString("dd.MM.yy HH:mm:ss") + "\n";
                 await SerialPortHelper.Remove_from_sensor();
                 await SerialPortHelper.OutIn(bytes, numplc, 7, 0, 0);
             }
@@ -227,8 +285,7 @@ namespace nookenApp.Helper
             await ProcessFleshData(flesh, sensorTime, sutki, tobj);
         }
 
-
-        private static int CalculateRR(int sutki, TObj tobj, DateTime now, DateTime maxtime, int numplc)
+        private int CalculateRR(int sutki, TObj tobj, DateTime now, DateTime maxtime, int numplc)
         {
             int rr = 0;
             if (tobj.KOEFSPEED < 60)
@@ -261,7 +318,7 @@ namespace nookenApp.Helper
             return rr;
         }
 
-        private static async Task ProcessFleshData(List<byte> flesh, DateTime sensorTime, int sutki, TObj tobj)
+        private async Task ProcessFleshData(List<byte> flesh, DateTime sensorTime, int sutki, TObj tobj)
         {
             try
             {
@@ -292,16 +349,14 @@ namespace nookenApp.Helper
                     }
 
                     var kodobj = tobj.KODOBJ;
-
-                    var Tvodovd = await db.Tvodvods.FirstOrDefaultAsync(o => o.UROVEN == tobj.KODOBJ);
+                    
+                    var Tvodovd = await _dbContext.Tvodvods.FirstOrDefaultAsync(o => o.UROVEN == tobj.KODOBJ);
 
                     if (Tvodovd != null && kodobj > 0)
                     {
-                        TbalansRepository tbalans = new TbalansRepository(db);
-
                         if (dattim.Day * 24 * 60 > 40000)
                         {
-                            await tbalans.DeleteAsync(Tvodovd.KODVODVOD, dattim, DateTime.Now);
+                            await _tbalansRepository.DeleteAsync(Tvodovd.KODVODVOD, dattim, DateTime.Now);
                         }
 
                         int i = 1;
@@ -324,7 +379,7 @@ namespace nookenApp.Helper
 
                                 if (datatime > DateTime.Now.AddDays(-sutki) && datatime < DateTime.Now)
                                 {
-                                    var objRecord = await db.TOBJ.FirstOrDefaultAsync(o => o.KODOBJ == kodobj);
+                                    var objRecord = await _dbContext.TOBJ.FirstOrDefaultAsync(o => o.KODOBJ == kodobj);
 
                                     if (objRecord != null)
                                     {
@@ -347,14 +402,14 @@ namespace nookenApp.Helper
                                         if (ti < 0)
                                             ti = 0;
 
-                                        if (!await top.InsertAsync(objRecord.KODOBJ, kodpokaz, datatime, ti, tc)) // Запись уровня воды
+                                        if (!await _topRepository.InsertAsync(objRecord.KODOBJ, kodpokaz, datatime, ti, tc)) // Запись уровня воды
                                         {
-                                            DataTextBox.Text += "Не получилось сохранить.\n";
+                                            DataLog += "Failed to save.\n";
                                         }
                                         if ((tc & 0x702) == 0)
                                         {
-                                            ti = await Calculations.CalculateVolumeAsync(Convert.ToByte(objRecord.KODOBJ), ti, db);
-                                            await tbalans.InsertAsync((byte)Tvodovd.KODVODVOD, (byte)Tvodovd.TYPEVODVOD, datatime, ti); // Запись оперативных расходов по водоводам
+                                            ti = await Calculations.CalculateVolumeAsync(Convert.ToByte(objRecord.KODOBJ), ti, _dbContext);
+                                            await _tbalansRepository.InsertAsync((byte)Tvodovd.KODVODVOD, (byte)Tvodovd.TYPEVODVOD, datatime, ti); // Запись оперативных расходов по водоводам
                                         }
                                     }
                                 }
@@ -365,17 +420,24 @@ namespace nookenApp.Helper
                     }
                     else
                     {
-                        DataTextBox.Text += "TVodvod not found or kodobj is invalid.\n";
+                        DataLog += "TVodvod not found or kodobj is invalid.\n";
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error in ProcessFleshData: " + ex.Message);
+                Console.WriteLine("Error in ProcessFleshData: " + ex.Message);
             }
         }
 
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
+        public void UpdateAPI()
+        {
+            _apiHelper = new ApiHelper();
+        }
     }
 }
-    

@@ -43,7 +43,8 @@ namespace nookenApp.Helper
             }
             catch (Exception ex)
             {
-                DataTextBox.Text += $"Error: 3{ex.Message}\n";
+                //DataTextBox.Text += $"Error: 3{ex.Message}\n";
+                Console.WriteLine($"Out In Error{ ex.ToString()}");
                 return false;
             }
         }
@@ -57,8 +58,10 @@ namespace nookenApp.Helper
             {
                 byte[] buffer = new byte[256];
                 bool isFirstRead = true;
-                int i = 0;
-                while (i != 5)
+                int retryCount = 0;
+                const int maxRetries = 3;
+
+                while (retryCount < maxRetries)
                 {
                     if (port.BytesToRead > 0 || isFirstRead)
                     {
@@ -68,12 +71,17 @@ namespace nookenApp.Helper
                         {
                             dataBuffer.AddRange(buffer.Take(bytesRead));
                             lastDataReceivedTime = DateTime.Now;
+                            retryCount = 0; // Сброс счетчика попыток после успешного чтения
                         }
                     }
 
-                    if ((DateTime.Now - lastDataReceivedTime).TotalSeconds >= 2)
+                    if ((DateTime.Now - lastDataReceivedTime).TotalMilliseconds >= 200)
                     {
-                        break;
+                        retryCount++;
+                        if (retryCount >= maxRetries)
+                        {
+                            break;
+                        }
                     }
 
                     await Task.Delay(10);
@@ -83,10 +91,51 @@ namespace nookenApp.Helper
             }
             catch (Exception ex)
             {
-                DataTextBox.Text += $"Error reading data: {ex.Message}\n";
+                //DataTextBox.Text += $"Error reading data: {ex.Message}\n";
+                Console.WriteLine($"Error reading data: {ex.ToString()}");
                 return new List<byte>();
             }
         }
+
+        //public static async Task<List<byte>> ReadBytesFromSensorAsync()
+        //{
+        //    List<byte> dataBuffer = new List<byte>();
+        //    DateTime lastDataReceivedTime = DateTime.Now;
+
+        //    try
+        //    {
+        //        byte[] buffer = new byte[256];
+        //        bool isFirstRead = true;
+        //        int i = 0;
+        //        while (i != 5)
+        //        {
+        //            if (port.BytesToRead > 0 || isFirstRead)
+        //            {
+        //                isFirstRead = false;
+        //                int bytesRead = await port.BaseStream.ReadAsync(buffer, 0, buffer.Length);
+        //                if (bytesRead > 0)
+        //                {
+        //                    dataBuffer.AddRange(buffer.Take(bytesRead));
+        //                    lastDataReceivedTime = DateTime.Now;
+        //                }
+        //            }
+
+        //            if ((DateTime.Now - lastDataReceivedTime).TotalSeconds >= 2)
+        //            {
+        //                break;
+        //            }
+
+        //            await Task.Delay(10);
+        //        }
+
+        //        return dataBuffer;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        DataTextBox.Text += $"Error reading data: {ex.Message}\n";
+        //        return new List<byte>();
+        //    }
+        //}
 
         public static List<byte> SendPacketToSlaveAsync(byte numplc, byte func, int address, byte nambe, byte[] data)
         {
@@ -143,6 +192,7 @@ namespace nookenApp.Helper
             catch (Exception ex)
             {
                 DataTextBox.Text += $"Error: 2{ex.Message}\n";
+                Console.WriteLine($"Send Packet {ex.Message}");
                 return new List<byte>();
             }
         }
@@ -206,6 +256,57 @@ namespace nookenApp.Helper
                 }
             }
             return data;
+        }
+
+        public static int CalculateModbusAddress(int kodobj, ModbusCommand command)
+        {
+            int baseAddress = 0x0001; // Базовый адрес для всех объектов
+            int commandOffset = GetCommandOffset(command);
+            return baseAddress + (kodobj - 1) * 10 + commandOffset;
+        }
+
+        private static int GetCommandOffset(ModbusCommand command)
+        {
+            switch (command)
+            {
+                case ModbusCommand.Lower:
+                    return 0; // Смещение для команды опускания
+                case ModbusCommand.Raise:
+                    return 1; // Смещение для команды подъема
+                case ModbusCommand.Stop:
+                    return 2; // Смещение для команды остановки
+                case ModbusCommand.Diagnose:
+                    return 3; // Смещение для команды диагностики
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(command), "Неизвестная команда Modbus");
+            }
+        }
+
+        public static async Task<bool> SendModbusCommand(ModbusCommand command, int address, double value = 0)
+        {
+            switch (command)
+            {
+                case ModbusCommand.SetUstavka:
+                    // Подготовка данных для отправки уставки
+                    byte[] data = BitConverter.GetBytes(value);
+                    // Отправка команды по Modbus
+                    List<byte> response = new List<byte>();
+                    bool success = await OutIn(response, numplc: 1, func: 6, address: address, nambe: 2, data: data);
+                    return success;
+
+                    // Другие команды...
+
+            }
+            return false;
+        }
+
+        public enum ModbusCommand
+        {
+            Lower,
+            Raise,
+            Stop,
+            Diagnose,
+            SetUstavka
         }
     }
 }

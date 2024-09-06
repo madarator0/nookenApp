@@ -14,6 +14,9 @@
             <TextBlock Text="Database Connection String:"/>
             <TextBox x:Name="ConnectionStringTextBox" Margin="0,0,0,10"/>
 
+            <TextBlock Text="Region:"/>
+            <TextBox x:Name="RerionTextBox" Margin="0,0,0,10"/>
+
             <Button Content="Save" Width="100" Click="SaveButton_Click"/>
         </StackPanel>
     </Grid>

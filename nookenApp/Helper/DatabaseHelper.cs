@@ -27,7 +27,8 @@ namespace nookenApp.Helper
             return Path.GetFullPath(Path.Combine(projectDirectory, Path.Combine(paths)));
         }
 
-        public async Task InitializeDatabaseAsync()
+        public async Task 
+            InitializeDatabaseAsync()
         {
             try
             {
