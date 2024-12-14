@@ -32,7 +32,7 @@ namespace nookenApp.Models
                     Synchron = synchron
                 };
 
-                _context.measurements.Add(measurement);
+                _context.Measurements.Add(measurement);
                 await _context.SaveChangesAsync();
 
                 return true;

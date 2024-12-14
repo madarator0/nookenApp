@@ -25,7 +25,7 @@ namespace nookenApp.Helper
 
         public async Task SynchronizeAsync(int idReg)
         {
-            var unsynchronizedData = await _context.measurements
+            var unsynchronizedData = await _context.Measurements
                 .Where(m => m.Synchron == 0)
                 .ToListAsync();
 
@@ -50,7 +50,7 @@ namespace nookenApp.Helper
                     if (!string.IsNullOrEmpty(response))
                     {
                         measurement.Synchron = 1;
-                        _context.measurements.Update(measurement);
+                        _context.Measurements.Update(measurement);
                     }
                 }
                 catch (Exception ex)

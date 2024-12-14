@@ -27,7 +27,8 @@ namespace nookenApp.Helper
             return Path.GetFullPath(Path.Combine(projectDirectory, Path.Combine(paths)));
         }
 
-        public async Task InitializeDatabaseAsync()
+        public async Task 
+            InitializeDatabaseAsync()
         {
             try
             {
@@ -39,7 +40,7 @@ namespace nookenApp.Helper
                     var checkDbCommand = new SqlCommand($"SELECT database_id FROM sys.databases WHERE Name = '{_databaseName}'", connection);
                     var result = await checkDbCommand.ExecuteScalarAsync();
 
-                    if (result != null)
+                    if (result == null)
                     {
                         // Restore the database from backup
                         string restoreDbScript = $@"

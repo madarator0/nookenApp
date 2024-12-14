@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using Microsoft.EntityFrameworkCore;
+using nookenApp.Helper;
+using System.IO.Ports;
+using System.Windows;
 
 namespace nookenApp.Views
 {
@@ -35,6 +38,12 @@ namespace nookenApp.Views
             }
         }
 
+        private async void OpenGateWindowButton_Click(object sender, RoutedEventArgs e)
+        {
+            Gate gate = new Gate();
+            gate.Show();
+        }
+
         private void OpenSettingsWindowButton_Click(object sender, RoutedEventArgs e)
         {
             SettingsWindow settingsWindow = new SettingsWindow();
@@ -42,3 +51,5 @@ namespace nookenApp.Views
         }
     }
 }
+
+

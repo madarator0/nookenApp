@@ -1,9 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using nookenApp.Helper;
 
 namespace nookenApp.Models
@@ -73,6 +68,38 @@ namespace nookenApp.Models
             catch
             {
                 return false;
+            }
+        }
+
+        public async Task<List<Tbalans>> GetAllAsync()
+        {
+            return await _context.Tbalans.ToListAsync();
+        }
+
+        public async Task<Tbalans> GetByIdAsync(int id)
+        {
+            return await _context.Tbalans.FindAsync(id) ?? new Tbalans();
+        }
+
+        public async Task AddAsync(Tbalans entity)
+        {
+            _context.Tbalans.Add(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(Tbalans entity)
+        {
+            _context.Tbalans.Update(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            var entity = await _context.Tbalans.FindAsync(id);
+            if (entity != null)
+            {
+                _context.Tbalans.Remove(entity);
+                await _context.SaveChangesAsync();
             }
         }
     }

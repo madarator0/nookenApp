@@ -12,6 +12,7 @@ namespace nookenApp.Views
             PortNameTextBox.Text = ConfigurationManager.AppSettings["PortName"];
             ApiUrlTextBox.Text = ConfigurationManager.AppSettings["ApiUrl"];
             ConnectionStringTextBox.Text = ConfigurationManager.AppSettings["connectionString"];
+            RerionTextBox.Text = ConfigurationManager.AppSettings["region"];
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -21,6 +22,7 @@ namespace nookenApp.Views
             config.AppSettings.Settings["PortName"].Value = PortNameTextBox.Text;
             config.AppSettings.Settings["ApiUrl"].Value = ApiUrlTextBox.Text;
             config.AppSettings.Settings["connectionString"].Value = ConnectionStringTextBox.Text;
+            config.AppSettings.Settings["region"].Value = RerionTextBox.Text;
             config.Save(ConfigurationSaveMode.Modified);
             ConfigurationManager.RefreshSection("appSettings");
 

@@ -1,9 +1,4 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.EntityFrameworkCore;
 using nookenApp.Helper;
 
 namespace nookenApp.Models
@@ -32,7 +27,37 @@ namespace nookenApp.Models
             }
         }
 
-        // Другие методы для работы с TQFH
+        public async Task<List<TQFH>> GetAllAsync()
+        {
+            return await _context.TQFHs.ToListAsync();
+        }
+
+        public async Task<TQFH> GetByKodobjAsync(int kodobj)
+        {
+            return await _context.TQFHs.FirstOrDefaultAsync(t => t.KODOBJ == kodobj) ?? new TQFH();
+        }
+
+        public async Task AddAsync(TQFH entity)
+        {
+            _context.TQFHs.Add(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(TQFH entity)
+        {
+            _context.TQFHs.Update(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            var entity = await _context.TQFHs.FindAsync(id);
+            if (entity != null)
+            {
+                _context.TQFHs.Remove(entity);
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 
 }
